@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Online Shopping Management System</title>
+
+<style>
+  /* ===================== BASE ===================== */
+  :root {
+    --primary: #4f46e5;
+    --primary-dark: #4338ca;
+    --dark: #0f172a;
+    --text: #1e293b;
+    --muted: #64748b;
+    --bg: #f1f5f9;
+    --white: #ffffff;
+    --border: #e2e8f0;
+    --danger: #dc2626;
+    --success: #16a34a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Segoe UI", Arial, sans-serif; }
+  body { background: var(--bg); color: var(--text); min-height: 100vh; }
+  .hidden { display: none !important; }
+
+  /* ===================== HEADER ===================== */
+  header {
+    background: var(--dark); color: var(--white);
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 10px; padding: 14px 24px;
+    position: sticky; top: 0; z-index: 10;
+  }
+  header h1 { font-size: 22px; }
+  nav { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tab {
+    background: transparent; color: var(--white); border: 1px solid #334155;
+    padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 14px;
+  }
+  .tab:hover { background: #1e293b; }
+  .tab.active { background: var(--primary); border-color: var(--primary); }
+
+  main { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+  h2 { margin-bottom: 14px; }
+
+  /* ===================== FORM CONTROLS ===================== */
+  input, select, textarea {
+    width: 100%; padding: 11px 12px; margin-bottom: 10px;
+    border: 1px solid var(--border); border-radius: 8px; font-size: 14px; background: var(--white);
+  }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary); border-color: transparent; }
+  textarea { resize: vertical; min-height: 70px; }
+  .btn {
+    background: var(--primary); color: var(--white); border: none;
+    padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;
+  }
+  .btn:hover { background: var(--primary-dark); }
+  .btn.danger { background: var(--danger); }
+  .btn.small { padding: 6px 12px; font-size: 13px; }
+
+  /* ===================== SHOP ===================== */
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+  .toolbar input { flex: 2; min-width: 180px; }
+  .toolbar select { flex: 1; min-width: 150px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 18px; }
+  .card {
+    background: var(--white); border-radius: 14px; padding: 20px; text-align: center;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, .07); transition: transform .15s;
+  }
+  .card:hover { transform: translateY(-4px); }
+  .card .emoji { font-size: 56px; }
+  .card h4 { margin: 8px 0 2px; }
+  .card small { color: var(--muted); }
+  .card .price { color: var(--primary); font-size: 20px; font-weight: 700; margin: 8px 0 12px; }
+  .empty { color: var(--muted); padding: 20px 0; }
+
+  /* ===================== CART / ORDERS ===================== */
+  .panel { background: var(--white); border-radius: 14px; padding: 18px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(15,23,42,.06); }
+  .cart-row {
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .cart-row:last-child { border-bottom: none; }
+  .qty { display: flex; align-items: center; gap: 10px; }
+  .qty button {
+    width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border);
+    background: var(--white); cursor: pointer; font-size: 16px;
+  }
+  .summary { display: flex; justify-content: space-between; font-size: 20px; font-weight: 700; margin: 12px 0; }
+  .order-head { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .badge { background: #dcfce7; color: var(--success); padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+  .order ul { margin: 8px 0 8px 20px; }
+
+  /* ===================== ADMIN TABLE ===================== */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; background: var(--white); border-radius: 10px; overflow: hidden; }
+  th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { background: #e2e8f0; font-size: 14px; }
+  .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+
+  /* ===================== TOAST ===================== */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px; background: var(--dark); color: var(--white);
+    padding: 12px 20px; border-radius: 10px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 20;
+  }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+
+<body>
+
+<!-- ===================== HEADER & NAVIGATION ===================== -->
+<header>
+  <h1>🛒 ShopEasy</h1>
+  <nav>
+    <button class="tab active" data-view="shop">Shop</button>
+    <button class="tab" data-view="cart">Cart (<span id="cartCount">0</span>)</button>
+    <button class="tab" data-view="orders">My Orders</button>
+    <button class="tab" data-view="admin">Admin</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ===================== SHOP VIEW ===================== -->
+  <section id="shop" class="view">
+    <h2>Products</h2>
+    <div class="toolbar">
+      <input type="text" id="search" placeholder="Search products...">
+      <select id="category"></select>
+      <select id="sort">
+        <option value="default">Sort: Default</option>
+        <option value="low">Price: Low to High</option>
+        <option value="high">Price: High to Low</option>
+        <option value="name">Name: A to Z</option>
+      </select>
+    </div>
+    <div id="productGrid" class="grid"></div>
+  </section>
+
+  <!-- ===================== CART VIEW ===================== -->
+  <section id="cart" class="view hidden">
+    <h2>Your Cart</h2>
+    <div class="panel" id="cartItems"></div>
+    <div class="summary"><span>Total</span><span>₹<span id="cartTotal">0</span></span></div>
+
+    <div class="panel">
+      <h3 style="margin-bottom:12px">Delivery Details</h3>
+      <form id="checkoutForm">
+        <input type="text" id="custName" placeholder="Full name" required>
+        <input type="tel" id="custPhone" placeholder="Mobile number (10 digits)" pattern="[0-9]{10}" title="Enter a 10 digit mobile number" required>
+        <textarea id="custAddress" placeholder="Delivery address" required></textarea>
+        <button type="submit" class="btn">Place Order</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ===================== ORDERS VIEW ===================== -->
+  <section id="orders" class="view hidden">
+    <h2>Order History</h2>
+    <div id="orderList"></div>
+  </section>
+
+  <!-- ===================== ADMIN VIEW ===================== -->
+  <section id="admin" class="view hidden">
+    <h2>Admin Panel</h2>
+    <div class="panel">
+      <h3 style="margin-bottom:12px">Add New Product</h3>
+      <form id="productForm">
+        <div class="form-row">
+          <input type="text" id="pName" placeholder="Product name" required>
+          <input type="text" id="pCategory" placeholder="Category" required>
+          <input type="number" id="pPrice" placeholder="Price (₹)" min="1" required>
+          <input type="text" id="pEmoji" placeholder="Emoji (e.g. 👕)" maxlength="4">
+        </div>
+        <button type="submit" class="btn">Add Product</button>
+      </form>
+    </div>
+
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <h3>All Products (<span id="productCount">0</span>)</h3>
+        <button class="btn danger small" id="resetBtn">Reset All Data</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Action</th></tr></thead>
+          <tbody id="adminTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div id="toast"></div>
+
+<script>
+/* ===================== DATA LAYER =====================
+   The browser's localStorage works like a small database.
+   Data stays saved even after the page is refreshed. */
+
+const DEFAULT_PRODUCTS = [
+  { id: 1, name: "T-Shirt",      category: "Clothing",    price: 499,   emoji: "👕" },
+  { id: 2, name: "Jeans",        category: "Clothing",    price: 1299,  emoji: "👖" },
+  { id: 3, name: "Sports Shoes", category: "Footwear",    price: 1999,  emoji: "👟" },
+  { id: 4, name: "Smartphone",   category: "Electronics", price: 14999, emoji: "📱" },
+  { id: 5, name: "Headphones",   category: "Electronics", price: 1299,  emoji: "🎧" },
+  { id: 6, name: "Laptop",       category: "Electronics", price: 45999, emoji: "💻" },
+  { id: 7, name: "Backpack",     category: "Accessories", price: 899,   emoji: "🎒" },
+  { id: 8, name: "Wrist Watch",  category: "Accessories", price: 2499,  emoji: "⌚" }
+];
+
+function load(key, fallback) {
+  try {
+    const data = JSON.parse(localStorage.getItem(key));
+    return data === null ? fallback : data;
+  } catch (e) {
+    return fallback;
+  }
+}
+function save(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+let products = load("shop_products", DEFAULT_PRODUCTS);
+let cart     = load("shop_cart", []);      // [{ id, qty }]
+let orders   = load("shop_orders", []);
+
+/* ===================== HELPERS ===================== */
+const $ = (id) => document.getElementById(id);
+
+// Prevents HTML injection when showing text typed by the user
+function esc(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function toast(message) {
+  const t = $("toast");
+  t.textContent = message;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 1800);
+}
+
+function findProduct(id) {
+  return products.find((p) => p.id === id);
+}
+
+/* ===================== NAVIGATION ===================== */
+function showView(name) {
+  document.querySelectorAll(".view").forEach((v) => v.classList.add("hidden"));
+  document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+  $(name).classList.remove("hidden");
+  document.querySelector(`.tab[data-view="${name}"]`).classList.add("active");
+  renderAll();
+}
+document.querySelectorAll(".tab").forEach((tab) => {
+  tab.addEventListener("click", () => showView(tab.dataset.view));
+});
+
+/* ===================== SHOP: SEARCH, FILTER, SORT ===================== */
+function renderCategories() {
+  const current = $("category").value || "All";
+  const categories = ["All", ...new Set(products.map((p) => p.category))];
+  $("category").innerHTML = categories
+    .map((c) => `<option value="${esc(c)}">${c === "All" ? "All Categories" : esc(c)}</option>`)
+    .join("");
+  $("category").value = categories.includes(current) ? current : "All";
+}
+
+function renderProducts() {
+  const text = $("search").value.trim().toLowerCase();
+  const category = $("category").value;
+  const sort = $("sort").value;
+
+  let list = products.filter((p) =>
+    p.name.toLowerCase().includes(text) &&
+    (category === "All" || p.category === category)
+  );
+
+  if (sort === "low")  list.sort((a, b) => a.price - b.price);
+  if (sort === "high") list.sort((a, b) => b.price - a.price);
+  if (sort === "name") list.sort((a, b) => a.name.localeCompare(b.name));
+
+  $("productGrid").innerHTML = list.length
+    ? list.map((p) => `
+        <div class="card">
+          <div class="emoji">${esc(p.emoji)}</div>
+          <h4>${esc(p.name)}</h4>
+          <small>${esc(p.category)}</small>
+          <div class="price">₹${p.price.toLocaleString("en-IN")}</div>
+          <button class="btn" data-add="${p.id}">Add to Cart</button>
+        </div>`).join("")
+    : `<p class="empty">No products found.</p>`;
+}
+
+$("search").addEventListener("input", renderProducts);
+$("category").addEventListener("change", renderProducts);
+$("sort").addEventListener("change", renderProducts);
+
+// One listener handles every "Add to Cart" button (event delegation)
+$("productGrid").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-add]");
+  if (btn) addToCart(Number(btn.dataset.add));
+});
+
+/* ===================== CART ===================== */
+function addToCart(id) {
+  const item = cart.find((c) => c.id === id);
+  if (item) item.qty++;
+  else cart.push({ id, qty: 1 });
+  save("shop_cart", cart);
+  updateCartCount();
+  toast("Added to cart ✔");
+}
+
+function changeQty(id, change) {
+  const item = cart.find((c) => c.id === id);
+  if (!item) return;
+  item.qty += change;
+  if (item.qty <= 0) cart = cart.filter((c) => c.id !== id);
+  save("shop_cart", cart);
+  renderCart();
+}
+
+function removeFromCart(id) {
+  cart = cart.filter((c) => c.id !== id);
+  save("shop_cart", cart);
+  renderCart();
+}
+
+function cartTotal() {
+  return cart.reduce((sum, c) => {
+    const p = findProduct(c.id);
+    return sum + (p ? p.price * c.qty : 0);
+  }, 0);
+}
+
+function updateCartCount() {
+  $("cartCount").textContent = cart.reduce((n, c) => n + c.qty, 0);
+}
+
+function renderCart() {
+  const rows = cart.map((c) => {
+    const p = findProduct(c.id);
+    if (!p) return "";
+    return `
+      <div class="cart-row">
+        <span>${esc(p.emoji)} <strong>${esc(p.name)}</strong> - ₹${p.price.toLocaleString("en-IN")}</span>
+        <span class="qty">
+          <button data-minus="${p.id}">−</button>
+          <strong>${c.qty}</strong>
+          <button data-plus="${p.id}">+</button>
+        </span>
+        <strong>₹${(p.price * c.qty).toLocaleString("en-IN")}</strong>
+        <button class="btn danger small" data-remove="${p.id}">Remove</button>
+      </div>`;
+  }).join("");
+
+  $("cartItems").innerHTML = rows || `<p class="empty">Your cart is empty. Go to the Shop and add something!</p>`;
+  $("cartTotal").textContent = cartTotal().toLocaleString("en-IN");
+  updateCartCount();
+}
+
+$("cartItems").addEventListener("click", (e) => {
+  const t = e.target;
+  if (t.dataset.plus)   changeQty(Number(t.dataset.plus), 1);
+  if (t.dataset.minus)  changeQty(Number(t.dataset.minus), -1);
+  if (t.dataset.remove) removeFromCart(Number(t.dataset.remove));
+});
+
+/* ===================== CHECKOUT & ORDERS ===================== */
+$("checkoutForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  if (cart.length === 0) {
+    toast("Your cart is empty!");
+    return;
+  }
+
+  const order = {
+    orderId: "ORD" + Date.now().toString().slice(-8),
+    date: new Date().toLocaleString("en-IN"),
+    customer: $("custName").value.trim(),
+    phone: $("custPhone").value.trim(),
+    address: $("custAddress").value.trim(),
+    items: cart.map((c) => {
+      const p = findProduct(c.id);
+      return { name: p.name, price: p.price, qty: c.qty };
+    }),
+    total: cartTotal(),
+    status: "Placed"
+  };
+
+  orders.unshift(order);        // newest order first
+  save("shop_orders", orders);
+  cart = [];
+  save("shop_cart", cart);
+  e.target.reset();
+  toast("Order placed successfully 🎉");
+  showView("orders");
+});
+
+function renderOrders() {
+  $("orderList").innerHTML = orders.length
+    ? orders.map((o) => `
+        <div class="panel order">
+          <div class="order-head">
+            <strong>${esc(o.orderId)}</strong>
+            <span class="badge">${esc(o.status)}</span>
+          </div>
+          <small>${esc(o.date)}</small>
+          <p style="margin-top:6px">${esc(o.customer)} | ${esc(o.phone)}</p>
+          <small>${esc(o.address)}</small>
+          <ul>
+            ${o.items.map((i) => `<li>${esc(i.name)} × ${i.qty} = ₹${(i.price * i.qty).toLocaleString("en-IN")}</li>`).join("")}
+          </ul>
+          <strong>Total: ₹${o.total.toLocaleString("en-IN")}</strong>
+        </div>`).join("")
+    : `<p class="empty">You have not placed any orders yet.</p>`;
+}
+
+/* ===================== ADMIN: ADD / DELETE PRODUCTS ===================== */
+$("productForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const newId = products.length ? Math.max(...products.map((p) => p.id)) + 1 : 1;
+
+  products.push({
+    id: newId,
+    name: $("pName").value.trim(),
+    category: $("pCategory").value.trim(),
+    price: Number($("pPrice").value),
+    emoji: $("pEmoji").value.trim() || "📦"
+  });
+
+  save("shop_products", products);
+  e.target.reset();
+  renderAll();
+  toast("Product added ✔");
+});
+
+function deleteProduct(id) {
+  if (!confirm("Delete this product?")) return;
+  products = products.filter((p) => p.id !== id);
+  cart = cart.filter((c) => c.id !== id);   // also remove it from the cart
+  save("shop_products", products);
+  save("shop_cart", cart);
+  renderAll();
+  toast("Product deleted");
+}
+
+function renderAdmin() {
+  $("productCount").textContent = products.length;
+  $("adminTable").innerHTML = products.map((p) => `
+    <tr>
+      <td>${esc(p.emoji)} ${esc(p.name)}</td>
+      <td>${esc(p.category)}</td>
+      <td>₹${p.price.toLocaleString("en-IN")}</td>
+      <td><button class="btn danger small" data-delete="${p.id}">Delete</button></td>
+    </tr>`).join("");
+}
+
+$("adminTable").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-delete]");
+  if (btn) deleteProduct(Number(btn.dataset.delete));
+});
+
+$("resetBtn").addEventListener("click", () => {
+  if (!confirm("This will delete all products, cart and orders and restore the demo data. Continue?")) return;
+  localStorage.clear();
+  products = DEFAULT_PRODUCTS.map((p) => ({ ...p }));
+  cart = [];
+  orders = [];
+  renderAll();
+  toast("Data reset");
+});
+
+/* ===================== START ===================== */
+function renderAll() {
+  renderCategories();
+  renderProducts();
+  renderCart();
+  renderOrders();
+  renderAdmin();
+}
+renderAll();
+</script>
+
+</body>
+</html>
