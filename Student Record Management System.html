@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Student Record Management System</title>
+<style>
+  :root {
+    color-scheme: light;
+    --primary:#2563eb; --primary-d:#1d4ed8; --bg:#f1f5f9; --card:#ffffff; --text:#1e293b;
+    --muted:#64748b; --border:#e2e8f0; --head:#0f172a; --danger:#dc2626; --ok:#16a34a; --th:#e2e8f0;
+    box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { color-scheme: dark; --bg:#0b1220; --card:#162033; --text:#e2e8f0; --muted:#94a3b8; --border:#27344d; --th:#1f2d46; }
+  }
+  :root[data-theme="dark"] { color-scheme: dark; --bg:#0b1220; --card:#162033; --text:#e2e8f0; --muted:#94a3b8; --border:#27344d; --th:#1f2d46; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Segoe UI", Arial, sans-serif; }
+  body { background: var(--bg); color: var(--text); min-height: 100vh; }
+  header { background: var(--head); color: #fff; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+  header h1 { font-size: 20px; }
+  #badge { font-size: 12px; padding: 4px 12px; border-radius: 20px; background: #475569; }
+  #badge.live { background: var(--ok); }
+  main { max-width: 1100px; margin: 22px auto; padding: 0 16px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 16px; }
+  .stat, .panel { background: var(--card); border-radius: 14px; padding: 16px 18px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+  .stat { border-left: 5px solid var(--primary); }
+  .stat small { color: var(--muted); } .stat h3 { font-size: 26px; margin-top: 4px; }
+  .panel { margin-bottom: 16px; }
+  .panel h3 { margin-bottom: 12px; }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0 12px; }
+  label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 3px; }
+  input, select { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; background: var(--card); color: var(--text); }
+  .btn { background: var(--primary); color: #fff; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
+  .btn:hover { background: var(--primary-d); } .btn.gray { background: #64748b; } .btn.danger { background: var(--danger); } .btn.sm { padding: 5px 10px; font-size: 12px; }
+  .hidden { display: none !important; }
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; } .toolbar input { flex: 2; min-width: 170px; } .toolbar select { flex: 1; min-width: 140px; }
+  .wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 10px; text-align: left; border-bottom: 1px solid var(--border); font-size: 14px; white-space: nowrap; }
+  th { background: var(--th); }
+  .tag { padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; }
+  .pass { background: #dcfce7; color: #166534; } .fail { background: #fee2e2; color: #991b1b; }
+  .empty { color: var(--muted); padding: 14px 0; }
+  #toast { position: fixed; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); right: 20px; background: var(--head); color: #fff; padding: 12px 18px; border-radius: 10px; opacity: 0; transition: opacity .3s; pointer-events: none; }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎓 Student Record Management System</h1>
+  <span id="badge">Connecting…</span>
+</header>
+
+<main>
+  <div class="stats">
+    <div class="stat"><small>Total Students</small><h3 id="s1">0</h3></div>
+    <div class="stat"><small>Average Percentage</small><h3 id="s2">0%</h3></div>
+    <div class="stat"><small>Pass Percentage</small><h3 id="s3">0%</h3></div>
+    <div class="stat"><small>Average Attendance</small><h3 id="s4">0%</h3></div>
+  </div>
+
+  <div class="panel">
+    <h3 id="formTitle">Add Student</h3>
+    <form id="form" novalidate>
+      <div class="row">
+        <div><label>Roll No.</label><input id="roll" placeholder="e.g. BCA101"></div>
+        <div><label>Full Name</label><input id="name"></div>
+        <div><label>Course</label><input id="course" value="BCA"></div>
+        <div><label>Semester</label><input id="sem" type="number" min="1" max="8" value="1"></div>
+        <div><label>Mobile (10 digits)</label><input id="phone" type="tel"></div>
+        <div><label>Email</label><input id="email" type="email"></div>
+        <div><label>Java Marks (/100)</label><input id="m1" type="number" min="0" max="100" value="0"></div>
+        <div><label>Web Tech Marks (/100)</label><input id="m2" type="number" min="0" max="100" value="0"></div>
+        <div><label>DBMS Marks (/100)</label><input id="m3" type="number" min="0" max="100" value="0"></div>
+        <div><label>Attendance (%)</label><input id="att" type="number" min="0" max="100" value="75"></div>
+      </div>
+      <button class="btn" id="saveBtn" type="submit">Add Student</button>
+      <button class="btn gray hidden" id="cancelBtn" type="button">Cancel</button>
+    </form>
+  </div>
+
+  <div class="panel">
+    <div class="toolbar">
+      <input id="search" placeholder="Search by name or roll no...">
+      <select id="filter"></select>
+    </div>
+    <div class="wrap">
+      <table>
+        <thead><tr><th>Roll</th><th>Name</th><th>Course</th><th>Sem</th><th>Total</th><th>%</th><th>Grade</th><th>Result</th><th>Attend.</th><th>Action</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+<div id="toast"></div>
+
+<script>
+/* ============ STATE ============
+   mode "live"  = shared database (when published online)
+   mode "local" = this browser only (when opened as a normal file in VS Code) */
+const $ = (id) => document.getElementById(id);
+const DEMO = [
+  { roll: "BCA101", name: "Rahul Sharma", course: "BCA", sem: 1, phone: "9876543210", email: "rahul@example.com", m1: 78, m2: 85, m3: 72, att: 90 },
+  { roll: "BCA102", name: "Priya Verma",  course: "BCA", sem: 1, phone: "9876501234", email: "priya@example.com", m1: 91, m2: 88, m3: 94, att: 96 },
+  { roll: "BCA103", name: "Amit Singh",   course: "BCA", sem: 1, phone: "9123456780", email: "amit@example.com",  m1: 30, m2: 45, m3: 52, att: 62 }
+];
+let mode = "local", students = [], col = null, editing = null, pendingDel = null, pendingTimer = null;
+
+function esc(t) { const d = document.createElement("div"); d.textContent = t; return d.innerHTML; }
+function toast(msg, ms = 2200) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), ms);
+}
+
+/* ============ RESULT CALCULATION ============ */
+function calc(s) {
+  const total = s.m1 + s.m2 + s.m3;
+  const pct = total / 3;
+  const grade = pct >= 75 ? "A" : pct >= 60 ? "B" : pct >= 45 ? "C" : pct >= 33 ? "D" : "F";
+  const pass = s.m1 >= 33 && s.m2 >= 33 && s.m3 >= 33;     // must pass every subject
+  return { total, pct, grade, pass };
+}
+
+/* ============ STORAGE LAYER ============ */
+function loadLocal() {
+  try { const d = JSON.parse(localStorage.getItem("students_v1")); if (d) return d; } catch (e) {}
+  return DEMO.map((s) => ({ ...s }));
+}
+function saveLocal() { try { localStorage.setItem("students_v1", JSON.stringify(students)); } catch (e) {} }
+
+async function putStudent(s) {
+  if (mode === "live") await col.doc(s.roll).set(s);          // shared database
+  else {
+    const i = students.findIndex((x) => x.roll === s.roll);
+    if (i >= 0) students[i] = s; else students.push(s);
+    saveLocal(); render();
+  }
+}
+async function removeStudent(roll) {
+  if (mode === "live") await col.doc(roll).delete();
+  else { students = students.filter((x) => x.roll !== roll); saveLocal(); render(); }
+}
+
+/* ============ RENDER ============ */
+function render() {
+  const text = $("search").value.trim().toLowerCase(), cur = $("filter").value || "All";
+  const courses = ["All", ...new Set(students.map((s) => s.course))];
+  $("filter").innerHTML = courses.map((c) => `<option value="${esc(c)}">${c === "All" ? "All Courses" : esc(c)}</option>`).join("");
+  $("filter").value = courses.includes(cur) ? cur : "All";
+
+  const list = students.filter((s) =>
+    (s.name.toLowerCase().includes(text) || s.roll.toLowerCase().includes(text)) &&
+    ($("filter").value === "All" || s.course === $("filter").value))
+    .sort((a, b) => a.roll.localeCompare(b.roll));
+
+  $("tbody").innerHTML = list.length ? list.map((s) => {
+    const r = calc(s);
+    return `<tr><td>${esc(s.roll)}</td><td>${esc(s.name)}</td><td>${esc(s.course)}</td><td>${s.sem}</td>
+      <td>${r.total}/300</td><td>${r.pct.toFixed(1)}%</td><td><strong>${r.grade}</strong></td>
+      <td><span class="tag ${r.pass ? "pass" : "fail"}">${r.pass ? "PASS" : "FAIL"}</span></td><td>${s.att}%</td>
+      <td><button class="btn sm" data-edit="${esc(s.roll)}">Edit</button> <button class="btn sm danger" data-del="${esc(s.roll)}">Delete</button></td></tr>`;
+  }).join("") : `<tr><td colspan="10" class="empty">No students found.</td></tr>`;
+
+  const n = students.length, rs = students.map(calc);
+  $("s1").textContent = n;
+  $("s2").textContent = n ? (rs.reduce((a, r) => a + r.pct, 0) / n).toFixed(1) + "%" : "0%";
+  $("s3").textContent = n ? Math.round((rs.filter((r) => r.pass).length / n) * 100) + "%" : "0%";
+  $("s4").textContent = n ? Math.round(students.reduce((a, s) => a + s.att, 0) / n) + "%" : "0%";
+}
+$("search").addEventListener("input", render);
+$("filter").addEventListener("change", render);
+
+/* ============ ADD / EDIT / DELETE ============ */
+function resetForm() {
+  editing = null; $("form").reset();
+  $("roll").disabled = false; $("course").value = "BCA"; $("sem").value = 1;
+  ["m1", "m2", "m3"].forEach((i) => ($(i).value = 0)); $("att").value = 75;
+  $("formTitle").textContent = "Add Student"; $("saveBtn").textContent = "Add Student"; $("cancelBtn").classList.add("hidden");
+}
+$("cancelBtn").addEventListener("click", resetForm);
+
+$("form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const s = {
+    roll: $("roll").value.trim().toUpperCase().replace(/[^A-Z0-9-]/g, ""), name: $("name").value.trim(),
+    course: $("course").value.trim(), sem: Number($("sem").value), phone: $("phone").value.trim(), email: $("email").value.trim(),
+    m1: Number($("m1").value), m2: Number($("m2").value), m3: Number($("m3").value), att: Number($("att").value)
+  };
+  const bad = (v) => !(v >= 0 && v <= 100);
+  const err = !s.roll ? "Enter a roll number (letters and digits only)" : !s.name ? "Enter the student name"
+    : !s.course ? "Enter the course" : !(s.sem >= 1 && s.sem <= 8) ? "Semester must be 1 to 8"
+    : !/^[0-9]{10}$/.test(s.phone) ? "Mobile number must be exactly 10 digits"
+    : [s.m1, s.m2, s.m3].some(bad) ? "Marks must be between 0 and 100" : bad(s.att) ? "Attendance must be 0 to 100" : "";
+  if (err) { toast("⚠ " + err, 3000); return; }
+  if (!editing && students.some((x) => x.roll === s.roll)) { toast("⚠ This roll number already exists", 3000); return; }
+  try {
+    await putStudent(s);
+    toast(editing ? "Student updated ✔" : "Student added ✔");
+    resetForm();
+  } catch (x) { toast("⚠ Could not save. You may have view-only access.", 3500); }
+});
+
+$("tbody").addEventListener("click", async (e) => {
+  const ed = e.target.dataset.edit, del = e.target.dataset.del;
+  if (ed) {
+    const s = students.find((x) => x.roll === ed); editing = ed;
+    ["roll", "name", "course", "sem", "phone", "email", "m1", "m2", "m3", "att"].forEach((k) => ($(k).value = s[k]));
+    $("roll").disabled = true;
+    $("formTitle").textContent = "Edit Student " + ed; $("saveBtn").textContent = "Update Student"; $("cancelBtn").classList.remove("hidden");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  if (del) {
+    // Popups (confirm) are blocked on published pages, so confirm with a second click instead
+    if (pendingDel !== del) {
+      pendingDel = del;
+      e.target.textContent = "Sure? Click again";
+      clearTimeout(pendingTimer);
+      pendingTimer = setTimeout(() => { pendingDel = null; render(); }, 3000);
+      return;
+    }
+    pendingDel = null; clearTimeout(pendingTimer);
+    try { await removeStudent(del); toast("Student deleted"); } catch (x) { toast("⚠ Could not delete. You may have view-only access.", 3500); }
+  }
+});
+
+/* ============ START: local first, then switch to live database if available ============ */
+students = loadLocal(); render();
+$("badge").textContent = "Offline mode (this browser only)";
+
+(async function connectLive() {
+  try {
+    if (!(window.claude && claude.use)) return;                 // normal file in VS Code: stay local
+    const db = await claude.use("db");
+    if (!db) return;
+    col = db.collection("students");
+    col.onSnapshot((snap) => {
+      mode = "live";
+      students = snap.docs.map((d) => ({ ...d.data(), roll: d.id }));
+      $("badge").textContent = "● Live - shared database"; $("badge").classList.add("live");
+      render();
+    }, () => { mode = "local"; });
+  } catch (e) { mode = "local"; }
+})();
+</script>
+</body>
+</html>
